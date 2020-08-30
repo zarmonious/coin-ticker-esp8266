@@ -10,19 +10,25 @@
 const char *ssid = "WIFI NAME";
 const char *password = "WIFI PASSWORD";
 
-const char *host = "api.binance.com";
+const char *host = "api.bitpanda.com";
 const int httpsPort = 443; //HTTPS= 443 and HTTP = 80
-const String path = "/api/v3/avgPrice?symbol=BTCUSDT";
+const String path = "/v1/ticker?market=";
+const String pairing = "_EUR";
+
+const String symbols[3] = {"BTC", "ETH", "XRP"};
+
+uint8_t symbolIndex = 0; 
  
 //SHA1 finger print of certificate use web browser to view and copy
-const char fingerprint[] PROGMEM = "5B 5F CA EA D0 43 FC 52 2F D9 E2 EC A0 6C A8 57 70 DB 58 F7";
+const char fingerprint[] PROGMEM = "95 AC 37 2F 73 B6 EE 19 8F 62 B9 E6 48 36 28 CF DE 5E 8F 03";
 
 char line1[17] = {};
 LiquidCrystal_I2C lcd(0x27,16,2);
-int show=0;
 
-DynamicJsonDocument doc(63);
+DynamicJsonDocument doc(255);
 String jsonResponse;
+
+float rawPrice = 0;
 
 //=======================================================================
 //                    Power on setup
@@ -83,9 +89,9 @@ void loop() {
   }
  
   Serial.print("requesting URL: ");
-  Serial.println(host+path);
- 
-  httpsClient.print(String("GET ") + path + " HTTP/1.1\r\n" +
+  Serial.println(host + path + symbols[symbolIndex] + pairing);
+  
+  httpsClient.print(String("GET ") + path + symbols[symbolIndex] + pairing + " HTTP/1.1\r\n" +
                "Host: " + host + "\r\n" +               
                "Connection: close\r\n\r\n");
  
@@ -114,13 +120,17 @@ void loop() {
     Serial.println(error.c_str());
   }
 
-  const char* price = doc["price"];
-  sprintf(line1, "BTC %.2f USD", atof(price));
+  rawPrice = doc["result"]["Last"];
+  sprintf(line1, "%s %.2f EUR", symbols[symbolIndex].c_str(), rawPrice);
 
+  symbolIndex = (symbolIndex + 1) % 3;    // result is remainder  of division 
+
+
+  lcd.clear();
   lcd.setCursor(0,0);
-  lcd.print("Binance ticker");
+  lcd.print("bitpanda ticker");
   lcd.setCursor(0,1);
   lcd.print(line1);
     
-  delay(5000);  //GET Data at every 2 seconds
+  delay(500);  //GET Data at every 2 seconds
 }
